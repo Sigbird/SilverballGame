@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.23.0/dist/phaser.js"></script> 
+   
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+  
+
+
+    <script>
+        var config = {
+            type: Phaser.AUTO,
+            width: 1920,
+            height: 1080,
+
+
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 1920,
+                height: 1080
+            }
+        };
+    
+        var game = new Phaser.Game(config);
+        var playTrigger = true;
+        var bolas;
+        var bola_central_texto;
+    
+        function preload ()
+        {
+            //this.load.setBaseURL('http://labs.phaser.io');
+    
+            this.load.image('bg', 'assets/bg2.png');
+            this.load.image('mask','assets/mascara');
+            this.load.image('bola_bg','assets/bolas/ball.png')
+            this.load.image('bola_central_extra','assets/bolas/big_ball_extra.png');
+            this.load.image('bola_central','assets/bolas/big_ball.png');
+            this.load.image('bingotop', 'assets/top_bingo.png');
+            this.load.image('duplatop', 'assets/top_dupla.png');
+            this.load.image('linhatop', 'assets/top_linha.png');
+            this.load.image("jackpot", 'assets/jackpot_disable.png');
+            this.load.image('container_aposta','assets/button_bar/container_aposta');
+            this.load.image('container_infos','assets/button_bar/container_infos');
+            this.load.image('container_moedas','assets/button_bar/container_moedas');
+            this.load.image('container_velocidade','assets/button_bar/container_velocidade');
+            this.load.image("bg_cartela", 'assets/cartela/cartela_base');
+            this.load.image("bg_cartelaverso", 'assets/cartela/cartela_verso');
+            this.load.image("celula_branco",'assets/cartela/celula_branco');
+            this.load.image("celula_amarelo",'assets/cartela/celula_amarela');
+            this.load.image("celula_azul",'assets/cartela/celula_azul');
+            this.load.image("celula_vermelho",'assets/cartela/celula_vermelho');
+            this.load.image("velocidade1",'assets/button_bar/vel1');
+            this.load.image("velocidade2",'assets/button_bar/vel2');
+            this.load.image("velocidade3",'assets/button_bar/vel3');
+            this.load.spritesheet("bt_jogar", "assets/button_bar/spritesheet/jogar.png",{ frameWidth: 256, frameHeight: 220 });
+            this.load.spritesheet("bt_maxima", "assets/button_bar/spritesheet/maxima.png",{ frameWidth: 243, frameHeight: 136 });
+            this.load.spritesheet("bt_extra", "assets/button_bar/spritesheet/extra.png",{ frameWidth: 256, frameHeight: 220 });
+            this.load.spritesheet("bt_cancelar", "assets/button_bar/spritesheet/cancelar.png",{ frameWidth: 243, frameHeight: 91 });
+            this.load.spritesheet("bt_turbo", "assets/button_bar/spritesheet/turbo.png",{ frameWidth: 243, frameHeight: 91 });
+            this.load.spritesheet("bt_plus", "assets/button_bar/spritesheet/plus.png",{ frameWidth: 50, frameHeight: 48 });
+            this.load.spritesheet("bt_minus", "assets/button_bar/spritesheet/minus.png",{ frameWidth: 50, frameHeight: 48 });
+            this.load.spritesheet("bt_config", "assets/button_bar/spritesheet/config.png",{ frameWidth: 59, frameHeight: 58 });
+
+            //this.load.image('logo', 'assets/sprites/phaser3-logo.png');
+            //this.load.image('red', 'assets/particles/red.png');
+        }
+
+        
+    
+        function create ()
+        {
+            //this.add.image(400, 300, 'bg');
+            var bingoValue = 1000;
+            var duplaValue = 100;
+            var linhaValue = 4;
+            var moedaValue = 1;
+            var apostaValue = 2;
+            var jackpotvalue = 1300.70;
+            var cartela;
+            var cartelabool;
+            var velocidade = 3;
+            var creatingBalls = false;
+
+
+            bg_image = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'bg');
+            this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'mask');
+            this.add.image(1020,1042,'container_infos');
+            this.add.text(530,1030,"CRÉDITOS",{fontSize:'25px',fontFamily: 'Arial' });
+            this.add.text(900,1030,"APOSTA",{fontSize:'25px',fontFamily: 'Arial' });
+            this.add.text(1250,1030,"GANHOS",{fontSize:'25px',fontFamily: 'Arial' });
+            var aposta_cont = this.add.image(1785,925,'container_aposta');
+            var aposta_text = this.add.text(aposta_cont.x,aposta_cont.y,""+formatMoney(apostaValue),{fontSize:'25px',fontFamily: 'Arial' }).setOrigin(0.5,0.5);
+            this.add.text(aposta_cont.x,aposta_cont.y-40,"APOSTA",{fontSize:'25px',fontFamily: 'Arial' }).setOrigin(0.5,0.5);
+            var bolaCentro = this.add.image(822,190,'bola_central');
+            bola_central_texto = this.add.text(bolaCentro.x,bolaCentro.y,"10",{fontSize:'120px',fontFamily: 'Arial',color: '#2e2e2d' , fontStyle: 'bold'}).setOrigin(0.5,0.5);
+
+
+            var moedas_cont = this.add.image(270,1042,'container_moedas');
+            var moedas_text = this.add.text(0,0,"R$ "+formatMoney(moedaValue),{fontSize:'30px',fontFamily: 'Arial' });
+            Phaser.Display.Align.In.TopCenter(
+            this.add.text(175,1015,"SELETOR DE MOEDAS",{fontSize:'16px',fontFamily: 'Arial' }),
+            moedas_cont);
+            Phaser.Display.Align.In.BottomCenter(moedas_text,moedas_cont);
+
+            var vel_cont = this.add.image(1785,240,'container_velocidade');
+            this.add.text(1700,185,"VELOCIDADE",{fontSize:'25px',fontFamily: 'Arial' });
+            var vel_image = this.add.image(1785,240,'velocidade3');
+            Phaser.Display.Align.In.Center(vel_image,vel_cont);
+
+
+
+
+
+            
+            var bingotop = this.add.image(200, 60, 'bingotop')
+            this.add.text(bingotop.x +300, bingotop.y, bingoValue, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize:'50px' }).setOrigin(0.5,0.5);
+            var duplatop = this.add.image(200, 110, 'duplatop')
+            this.add.text(duplatop.x +315, duplatop.y, duplaValue, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize:'50px' }).setOrigin(0.5,0.5);
+            var linhatop = this.add.image(200, 150, 'linhatop')
+            this.add.text(linhatop.x +335, linhatop.y, linhaValue, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize:'50px' }).setOrigin(0.5,0.5);
+
+            
+            
+            //this.add.text(1200, 40, formatMoney(jackpotvalue), { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif', fontSize:'65px' });
+            //this.add.image(this.cameras.main.width / 1.45, this.cameras.main.height / 11, 'jackpot')
+
+            var cartela1 = this.add.image(420, 450, 'bg_cartela')
+            var cartela1verso = this.add.image(420 , 450, 'bg_cartelaverso').visible = false;
+            var cartela2 = this.add.image(420, 750, 'bg_cartela')
+            var cartela2verso = this.add.image(420 , 750, 'bg_cartelaverso').visible = false;
+            var cartela3 = this.add.image(1230,  450, 'bg_cartela')
+            var cartela3verso = this.add.image(1230, 450, 'bg_cartelaverso').visible = false;
+            var cartela4 = this.add.image(1230, 750, 'bg_cartela')
+            var cartela4verso = this.add.image(1230, 750, 'bg_cartelaverso').visible = false;
+                        
+
+            //CARTELAS
+            
+            //cartela 1
+            this.add.text(160,325,"CARTELA:",{fontSize:'20px',fontFamily: 'Arial' });
+            this.add.text(470,325,"APOSTA:",{fontSize:'20px',fontFamily: 'Arial' });
+            var cartelanumeros1 = this.add.group({
+                key: 'celula_branco',
+                frameQuantity: 15
+            });
+            
+            Phaser.Actions.GridAlign(cartelanumeros1.getChildren(), {
+                width: 5,
+                height: 3,
+                cellWidth: 107,
+                cellHeight: 78,
+                x: cartela1.x/2.07,
+                y: cartela1.y/1.18
+            });
+
+            for (let index = 0; index < 15; index++) {
+                var cell = Phaser.Actions.GetFirst(cartelanumeros1.getChildren(), {alpha: 1}, index)
+                //cell.setTexture('celula_azul',0);
+                Phaser.Display.Align.In.Center(this.add.text(cell.x-30 , cell.y-30 , Phaser.Math.Between(01, 99),  { fontFamily: 'Arial', fontSize:'50px' ,color: '#2e2e2d', fontStyle: 'bold'})
+                ,cell);
+                
+            }
+            
+            //cartela 2
+            this.add.text(160,625,"CARTELA:",{fontSize:'20px',fontFamily: 'Arial' });
+            this.add.text(470,625,"APOSTA:",{fontSize:'20px',fontFamily: 'Arial' });
+
+            var cartelanumeros2 = this.add.group({
+                key: 'celula_branco',
+                frameQuantity: 15
+            });
+            
+            Phaser.Actions.GridAlign(cartelanumeros2.getChildren(), {
+                width: 5,
+                height: 3,
+                cellWidth: 107,
+                cellHeight: 78,
+                x: cartela2.x/2.07,
+                y: cartela2.y/1.1
+            });
+
+            for (let index = 0; index < 15; index++) {
+                var cell = Phaser.Actions.GetFirst(cartelanumeros2.getChildren(), {alpha: 1}, index)
+
+                Phaser.Display.Align.In.Center(this.add.text(cell.x-30 , cell.y-30 , Phaser.Math.Between(01, 99),  { fontFamily: 'Arial', fontSize:'50px' ,color: '#2e2e2d', fontStyle: 'bold'})
+                ,cell);
+                
+                //cell.setTexture('celula_azul',0);
+                
+            }
+
+            //cartela 3
+            this.add.text(970,325,"CARTELA:",{fontSize:'20px',fontFamily: 'Arial' });
+            this.add.text(1280,325,"APOSTA:",{fontSize:'20px',fontFamily: 'Arial' });
+
+            var cartelanumeros3 = this.add.group({
+                key: 'celula_branco',
+                frameQuantity: 15
+            });
+
+            Phaser.Actions.GridAlign(cartelanumeros3.getChildren(), {
+                width: 5,
+                height: 3,
+                cellWidth: 107,
+                cellHeight: 78,
+                x: cartela3.x/1.215,
+                y: cartela3.y/1.18
+            });
+
+            for (let index = 0; index < 15; index++) {
+                var cell = Phaser.Actions.GetFirst(cartelanumeros3.getChildren(), {alpha: 1}, index)
+
+                Phaser.Display.Align.In.Center(this.add.text(cell.x-30 , cell.y-30 , Phaser.Math.Between(01, 99),  { fontFamily: 'Arial', fontSize:'50px' ,color: '#2e2e2d', fontStyle: 'bold'})
+                ,cell);
+               // cell.setTexture('celula_azul',0);
+                
+            }
+
+            //cartela 4
+            this.add.text(970,625,"CARTELA:",{fontSize:'20px',fontFamily: 'Arial' });
+            this.add.text(1280,625,"APOSTA:",{fontSize:'20px',fontFamily: 'Arial' });
+
+            var cartelanumeros4 = this.add.group({
+                key: 'celula_branco',
+                frameQuantity: 15
+            });
+            
+            Phaser.Actions.GridAlign(cartelanumeros4.getChildren(), {
+                width: 5,
+                height: 3,
+                cellWidth: 107,
+                cellHeight: 78,
+                x: cartela4.x/1.215,
+                y: cartela4.y/1.1
+            });
+            
+            for (let index = 0; index < 15; index++) {
+                var cell = Phaser.Actions.GetFirst(cartelanumeros4.getChildren(), {alpha: 1}, index)
+
+                Phaser.Display.Align.In.Center(this.add.text(cell.x-30 , cell.y-30 , Phaser.Math.Between(01, 99),  { fontFamily: 'Arial', fontSize:'50px' ,color: '#2e2e2d', fontStyle: 'bold'})
+                ,cell);
+                //cell.setTexture('celula_azul',0);
+                
+            }
+
+            //BOTÕES
+
+             //Botão Config
+             var bt_config = this.add.sprite(50, 1042, 'bt_config',3).setInteractive();
+             bt_config.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_config.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_config.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_config.on('pointerup',function(event){
+              this.setFrame(3); 
+            })
+            
+            //Botão Jogar
+            var bt_jogar = this.add.sprite(1785, 550, 'bt_jogar',3).setInteractive();
+            bt_jogar.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_jogar.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_jogar.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_jogar.on('pointerup',function(event){
+              jogarteste = true;
+              this.setFrame(3); 
+            })
+            
+            //Botão Aposta Maxima
+            var bt_maxima = this.add.sprite(1785, 770, 'bt_maxima',3).setInteractive();
+            bt_maxima.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_maxima.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_maxima.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_maxima.on('pointerup',function(event){
+              playTrigger = true;
+              this.setFrame(3); 
+            })
+
+            //Botão Extra
+            var bt_extra = this.add.sprite(1785, 550, 'bt_extra',3).setInteractive();
+            bt_extra.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_extra.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_extra.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_extra.on('pointerup',function(event){
+              this.setFrame(3); 
+            })
+            bt_extra.visible = false;
+
+            //Botão Turbo
+            var bt_turbo = this.add.sprite(1785, 350, 'bt_turbo',3).setInteractive();
+            bt_turbo.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_turbo.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_turbo.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_turbo.on('pointerup',function(event){
+              this.setFrame(3); 
+            })
+
+            //Botão Cancelar
+            var bt_cancelar = this.add.sprite(1785, 350, 'bt_cancelar',3).setInteractive();
+            bt_cancelar.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_cancelar.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_cancelar.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_cancelar.on('pointerup',function(event){
+              this.setFrame(3); 
+            })
+            bt_cancelar.visible = false;
+                
+            //Botão AUMENTA MOEDA
+            var bt_plus1 = this.add.sprite(420, 1042, 'bt_plus',3).setInteractive();
+            bt_plus1.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_plus1.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_plus1.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_plus1.on('pointerup',function(event){
+              moedas_text.setText("R$ "+formatMoney(moedaValue+=0.5));
+              this.setFrame(3); 
+            })
+            //Botão AUMENTA VELOCIDADE
+            var bt_plus2 = this.add.sprite(1875, 240, 'bt_plus',3).setInteractive();
+            bt_plus2.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_plus2.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_plus2.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_plus2.on('pointerup',function(event){
+              if(velocidade<2){velocidade++; vel_image.setTexture('velocidade2',0);velocidadebolas = 250;speedball=150}
+              else if(velocidade == 2){velocidade++; vel_image.setTexture('velocidade3',0);velocidadebolas = 200;speedball=200}
+              this.setFrame(3); 
+            })
+            //Botão AUMENTA APOSTA
+            var bt_plus3 = this.add.sprite(1875, 925, 'bt_plus',3).setInteractive();
+            bt_plus3.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_plus3.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_plus3.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_plus3.on('pointerup',function(event){
+              aposta_text.setText(""+formatMoney(apostaValue+=0.5));
+              this.setFrame(3); 
+            })
+
+            //Botão REDUZ MOEDA
+            var bt_minus1 = this.add.sprite(120, 1042, 'bt_minus',3).setInteractive();
+            bt_minus1.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_minus1.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_minus1.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_minus1.on('pointerup',function(event){
+              if(moedaValue>0.5){moedas_text.setText("R$ "+formatMoney(moedaValue-=0.5));}
+              this.setFrame(3); 
+            })
+            //Botão REDUZ VELOCIDADE
+            var bt_minus2 = this.add.sprite(1695, 240, 'bt_minus',3).setInteractive();
+            bt_minus2.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_minus2.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_minus2.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_minus2.on('pointerup',function(event){
+              if(velocidade>2){velocidade--; vel_image.setTexture('velocidade2',0);velocidadebolas = 250;speedball = 150;}
+              else if(velocidade == 2){velocidade--; vel_image.setTexture('velocidade1',0);velocidadebolas = 300;speedball = 200}
+              this.setFrame(3); 
+            })
+            //Botão REDUZ APOSTA
+            var bt_minus3 = this.add.sprite(1695, 925, 'bt_minus',3).setInteractive();
+            bt_minus3.on('pointerover',function(event){
+              this.setFrame(2); 
+            })
+            bt_minus3.on('pointerout',function(event){
+              this.setFrame(3); 
+            })
+            bt_minus3.on('pointerdown',function(event){
+              this.setFrame(1); 
+            })
+            bt_minus3.on('pointerup',function(event){
+              if(apostaValue>0.5){aposta_text.setText(""+formatMoney(apostaValue-=0.5))}
+              this.setFrame(3); 
+            })
+
+            
+
+        }//END OF CREATE
+
+        var timesinceincre=0;
+        var ballmax2 = 9;
+        var ballmax1 = 10;
+        var ballqtd1 = 0;
+        var ballqtd2 = 0;
+        var base = 0;
+        var jogarteste = false;
+        var velocidadebolas = 200;
+        var speedball = 100;
+
+        function update (time, delta){
+
+          timesinceincre += delta;
+          if(jogarteste == true){
+          if(base == 0 & timesinceincre >=velocidadebolas){
+            timesinceincre = 0;
+            createBalls1(this,ballqtd1,speedball);
+            ballqtd1 ++;
+          }
+          
+          if(base == 1 & timesinceincre >=velocidadebolas){
+            timesinceincre = 0;
+            createBalls2(this,ballqtd2,speedball);
+            ballqtd2 ++;
+          }
+
+          if(ballqtd1 == ballmax1){base = 1};
+          if(ballqtd2 == ballmax2){base = 2};
+          }
+
+        }
+
+
+        function createBalls1(scene,index,speed){
+
+          //for (let index = 0; index < 5; index++) {
+              
+              var ballcont2 = scene.add.container(780,305);
+              var numero1 = Phaser.Math.Between(01,99);
+              var bola_bg2 = scene.add.image(0,0,'bola_bg');
+              var bola_numero2 = scene.add.text(bola_bg2.x,bola_bg2.y,numero1,{fontSize:'30px',fontFamily: 'Arial',color: '#2e2e2d' , fontStyle: 'bold'}).setOrigin(0.5,0.5);
+              bola_central_texto.setText(numero1);
+              
+              ballcont2.add(bola_bg2);
+              ballcont2.add(bola_numero2);
+
+              tweenbase(scene,ballcont2,index,1,speed);
+
+              var ballcont1 = scene.add.container(780,305);
+              var numero2 = Phaser.Math.Between(01,99);
+              var bola_bg1 = scene.add.image(0,0,'bola_bg');
+              var bola_numero1 = scene.add.text(bola_bg2.x,bola_bg2.y,numero2,{fontSize:'30px',fontFamily: 'Arial',color: '#2e2e2d' , fontStyle: 'bold'}).setOrigin(0.5,0.5);
+              bola_central_texto.setText(numero2);
+
+              ballcont1.add(bola_bg1);
+              ballcont1.add(bola_numero1);
+
+              tweenbase(scene,ballcont1,index,0,speed);
+              
+
+            //}
+
+        }
+
+        function createBalls2(scene,index,speed){
+
+        //for (let index = 0; index < 5; index++) {
+            
+            var ballcont2 = scene.add.container(780,305);
+            var numero1 = Phaser.Math.Between(01,99);
+            var bola_bg2 = scene.add.image(0,0,'bola_bg');
+            var bola_numero2 = scene.add.text(bola_bg2.x,bola_bg2.y,numero1,{fontSize:'30px',fontFamily: 'Arial',color: '#2e2e2d' , fontStyle: 'bold'}).setOrigin(0.5,0.5);
+            bola_central_texto.setText(numero1);
+            
+            ballcont2.add(bola_bg2);
+            ballcont2.add(bola_numero2);
+
+            tweencenter(scene,ballcont2,index,1,speed);
+
+            var ballcont1 = scene.add.container(780,305);
+            var numero2 = Phaser.Math.Between(01,99);
+            var bola_bg1 = scene.add.image(0,0,'bola_bg');
+            var bola_numero1 = scene.add.text(bola_bg2.x,bola_bg2.y,numero2,{fontSize:'30px',fontFamily: 'Arial',color: '#2e2e2d' , fontStyle: 'bold'}).setOrigin(0.5,0.5);
+            bola_central_texto.setText(numero2);
+            
+            ballcont1.add(bola_bg1);
+            ballcont1.add(bola_numero1);
+
+            tweencenter(scene,ballcont1,index,0,speed);
+            
+
+          //}
+
+        }
+
+        function tweencenter(scene, ballcont2, pos, direcao, speed){
+           if(speed>150){
+            if(direcao ==1){
+              ballcont2.x = 860;
+              ballcont2.alpha = 0;
+            scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 200,
+                    alpha:0
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 840-65*pos
+                  },
+                ]
+                });
+            }else{
+              ballcont2.x = 780;
+              ballcont2.alpha = 0;
+              scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                {
+                    delay: 100,
+                    alpha:0
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 840-65*pos
+                  },
+                ]
+                });
+            }
+           }else{
+            if(direcao ==1){
+              ballcont2.x = 860;
+              ballcont2.alpha = 0;
+            scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 200,
+                    alpha:0
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 840-65*pos
+                  },
+                ]
+                });
+            }else{
+              ballcont2.x = 780;
+              ballcont2.alpha = 0;
+              scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                {
+                    delay: 100,
+                    alpha:0
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 840-65*pos
+                  },
+                ]
+                });
+            }
+           }
+          }
+
+
+          function tweenbase(scene, ballcont2, pos, direcao, speed){
+            if(speed>150){ //VELOCIDADE LENTA 
+            if(direcao ==1){
+              ballcont2.x = 870;
+              ballcont2.alpha = 0;
+            scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 200,
+                    alpha:0
+                    
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 905
+                  },
+                  {
+                    targets: ballcont2,
+                    x: 1450-pos*65,
+                    
+                  },
+                ]
+                });
+            }else{
+              ballcont2.x = 770;
+              ballcont2.alpha = 0;
+              scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 100,
+                    alpha:0
+                  },
+                  {
+                    alpha:2,
+                    targets: ballcont2,
+                    y: 905
+                  },
+                  {
+                    targets: ballcont2,
+                    x: 200+pos*65
+                  },
+                ]
+                });
+            }
+            }else{ //VELOCIDADE MEDIA OU MAIS
+
+              if(direcao ==1){
+              ballcont2.x = 870;
+              ballcont2.alpha = 0;
+            scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 200,
+                    alpha:0
+                    
+                  },
+                  {
+                    
+                    targets: ballcont2,
+                    y: 905
+                  },
+                  {
+                    targets: ballcont2,
+                    x: 1450-pos*65,
+                    
+                  },
+                  {alpha:2}
+                ]
+                });
+            }else{
+              ballcont2.x = 770;
+              ballcont2.alpha = 0;
+              scene.tweens.timeline({
+                targets: ballcont2,
+                ease: 'cubic',
+                duration: speed,
+                loop: 0,
+                tweens: [
+                  {
+                    delay: 100,
+                    alpha:0
+                  },
+                  {
+                   
+                    targets: ballcont2,
+                    y: 905
+                  },
+                  {
+                    targets: ballcont2,
+                    x: 200+pos*65
+                  },
+                  {alpha:2}
+                ]
+                });
+            }
+
+            }
+          }
+
+         /*
+          if(playTrigger == true){
+            generateBalls();
+            playTrigger = false;
+          }
+          bolas.first.y += Phaser.Math.GetSpeed(600, 6) * delta;
+*/
+        
+
+        
+          //this.add.tween(gameObject) to
+
+          /*var tween = scene.tweens.add({
+              targets: gameObject,
+              x: 400,
+              ease: 'Linear',       // 'Cubic', 'Elastic', 'Bounce', 'Back'
+              duration: 1000,
+              repeat: 0,            // -1: infinity
+              yoyo: false
+          });*/
+
+        
+
+
+        function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
+          try {
+            decimalCount = Math.abs(decimalCount);
+            decimalCount = isNaN(decimalCount) ? 2 : decimalCount;
+
+            const negativeSign = amount < 0 ? "-" : "";
+
+            let i = parseInt(amount = Math.abs(Number(amount) || 0).toFixed(decimalCount)).toString();
+            let j = (i.length > 3) ? i.length % 3 : 0;
+
+            return negativeSign + (j ? i.substr(0, j) + thousands : '') + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + thousands) + (decimalCount ? decimal + Math.abs(amount - i).toFixed(decimalCount).slice(2) : "");
+          } catch (e) {
+            console.log(e)
+          }
+        };
+
+        function generateBalls(){
+          bolas.first.x=0;
+          bolas.first.y=0;
+ 
+
+        }
+
+
+        </script>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>  
+    
+    
+    <script src="main.js"></script>
+ </body>
+</html>
